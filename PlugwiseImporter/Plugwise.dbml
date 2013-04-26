@@ -1,0 +1,10 @@
+﻿<?xml version="1.0" encoding="utf-8"?><Database Class="PlugwiseDataContext" xmlns="http://schemas.microsoft.com/linqtosql/dbml/2007">
+  <Table Name="" Member="Appliance_Logs">
+    <Type Name="Appliance_Log">
+      <Column Member="LogDate" Type="System.DateTime" CanBeNull="false" />
+      <Column Member="ApplianceID" Type="System.Int32" CanBeNull="false" />
+      <Column Member="Usage_peak" Type="System.Double" CanBeNull="false" />
+      <Column Member="Usage_offpeak" Type="System.Double" CanBeNull="false" />
+    </Type>
+  </Table>
+</Database>

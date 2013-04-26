@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ordesignerObjectsDiagram dslVersion="1.0.0.0" absoluteBounds="0, 0, 11, 8.5" name="Plugwise">
+  <DataContextMoniker Name="/PlugwiseDataContext" />
+  <nestedChildShapes>
+    <classShape Id="09615c9d-6f11-48a2-9507-d31902fc3d01" absoluteBounds="1.375, 1.125, 2.375, 1.5785953776041666">
+      <DataClassMoniker Name="/PlugwiseDataContext/Appliance_Log" />
+      <nestedChildShapes>
+        <elementListCompartment Id="55e4b86f-7663-410b-a60c-dcef976735f1" absoluteBounds="1.39, 1.585, 2.3449999999999998, 1.0185953776041665" name="DataPropertiesCompartment" titleTextColor="Black" itemTextColor="Black" />
+      </nestedChildShapes>
+    </classShape>
+  </nestedChildShapes>
+</ordesignerObjectsDiagram>
