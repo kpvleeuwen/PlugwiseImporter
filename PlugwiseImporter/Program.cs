@@ -13,15 +13,38 @@ namespace PlugwiseImporter
 {
     class Program
     {
+        static Settings s = Settings.Default;
+
         static void Main(string[] args)
         {
-            var month = DateTime.Now.Month;
-            var year = DateTime.Now.Year;
-            foreach (var arg in args)
+            try
             {
-                if (TryParse(arg, "month", ref month)) continue;
-                if (TryParse(arg, "year", ref year)) continue;
+                var month = DateTime.Now.Month;
+                var year = DateTime.Now.Year;
+                foreach (var arg in args)
+                {
+                    if (TryParse(arg, "month", ref month)) continue;
+                    if (TryParse(arg, "year", ref year)) continue;
+                }
+
+                DoImport(month, year);
             }
+            catch (Exception e)
+            {
+                Console.Error.WriteLine(e);
+                throw;
+            }
+            Console.WriteLine();
+            Console.WriteLine("Press any key to continue...");
+            Console.ReadKey();
+
+        }
+
+        private static void DoImport(int month, int year)
+        {
+            if (string.IsNullOrEmpty(s.FacilityId))
+                throw new InvalidOperationException("Please configure your facility id in the .config file");
+
             IList<YieldAggregate> applianceLog;
             applianceLog = GetPlugwiseYield(month, year);
             Console.WriteLine("Result: {0} days, {1} kWh",
@@ -36,21 +59,18 @@ namespace PlugwiseImporter
 
             var logincookie = GetLoginSession(credentials);
             UploadHistory(applianceLog, logincookie);
-            Console.WriteLine();
-            Console.WriteLine("Press any key to continue...");
-            Console.ReadKey();
-
         }
 
         private static NetworkCredential GetCredentials()
         {
-            var user = Settings.Default.Username;
+            var user = s.Username;
+            var password = s.Password;
+            // it is to be expected that not everybody likes to put their credentials in plain text on disk
             if (string.IsNullOrEmpty(user))
-            {
+            {  
                 Console.WriteLine("Username:");
                 user = Console.ReadLine();
             }
-            var password = Settings.Default.Password;
             if (string.IsNullOrEmpty(password))
             {
                 Console.WriteLine("Password:");
@@ -120,7 +140,7 @@ namespace PlugwiseImporter
         /// <returns>the expected plugwise database</returns>
         private static FileInfo GetPlugwiseDatabase()
         {
-            var path = Settings.Default.PlugwiseDatabasePath;
+            var path = s.PlugwiseDatabasePath;
             if (!string.IsNullOrEmpty(path))
                 return new FileInfo(path);
             else return new FileInfo(Path.Combine(
@@ -130,11 +150,11 @@ namespace PlugwiseImporter
 
         private static void UploadHistory(IEnumerable<YieldAggregate> applianceLog, WebHeaderCollection logincookie)
         {
-            var uri = new Uri(Settings.Default.InsertUri);
+            var uri = new Uri(s.InsertUri);
 
             var values = new NameValueCollection();
 
-            Console.WriteLine("Uploading yield for FacilityId {0}", Settings.Default.FacilityId);
+            Console.WriteLine("Uploading yield for FacilityId {0}", s.FacilityId);
 
             foreach (var log in applianceLog)
             {
