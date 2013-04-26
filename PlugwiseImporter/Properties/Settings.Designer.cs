@@ -25,15 +25,6 @@ namespace PlugwiseImporter.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("20456")]
-        public int FacilityId {
-            get {
-                return ((int)(this["FacilityId"]));
-            }
-        }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string Username {
             get {
@@ -74,6 +65,15 @@ namespace PlugwiseImporter.Properties {
         public string LoginUri {
             get {
                 return ((string)(this["LoginUri"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string FacilityId {
+            get {
+                return ((string)(this["FacilityId"]));
             }
         }
     }
