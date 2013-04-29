@@ -76,5 +76,23 @@ namespace PlugwiseImporter.Properties {
                 return ((string)(this["FacilityId"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string PvOutputSystemId {
+            get {
+                return ((string)(this["PvOutputSystemId"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string PvOutputApiKey {
+            get {
+                return ((string)(this["PvOutputApiKey"]));
+            }
+        }
     }
 }

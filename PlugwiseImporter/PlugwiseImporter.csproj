@@ -56,6 +56,9 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
+    <Compile Include="PvOutputApiUploader.cs" />
+    <Compile Include="SonnenErtragUploader.cs" />
+    <Compile Include="Utils.cs" />
     <Compile Include="YieldAggregate.cs" />
   </ItemGroup>
   <ItemGroup>

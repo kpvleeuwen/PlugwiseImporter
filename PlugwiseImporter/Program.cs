@@ -8,6 +8,7 @@ using System.Data.OleDb;
 using System.Net;
 using System.Collections.Specialized;
 using PlugwiseImporter.Properties;
+using System.Reflection;
 
 namespace PlugwiseImporter
 {
@@ -19,34 +20,54 @@ namespace PlugwiseImporter
         {
             try
             {
-                var month = DateTime.Now.Month;
-                var year = DateTime.Now.Year;
+                var days = 14;
+                var to = DateTime.Now;
+                var from = to.AddDays(-days);
+                string unused = string.Empty;
                 foreach (var arg in args)
                 {
-                    if (TryParse(arg, "month", ref month)) continue;
-                    if (TryParse(arg, "year", ref year)) continue;
+                    if (TryParse(arg, "days", ref days))
+                    {
+                        from = to.AddDays(-days);
+                        continue;
+                    }
+                    if (TryParse(arg, "from", ref from)) continue;
+                    if (TryParse(arg, "to", ref to)) continue;
+                    if (TryParse(arg, "dumpconfig", ref unused))
+                    {
+                        DumpSettingStats();
+                    }
                 }
 
-                DoImport(month, year);
+                DoImport(from, to);
             }
             catch (Exception e)
             {
                 Console.Error.WriteLine(e);
-                throw;
+                Console.ReadLine();
+                // Swallow exceptions because it confuses users
+                // when Windows throws an error report at them (sorry, Microsoft). 
             }
-            Console.WriteLine();
-            Console.WriteLine("Press any key to continue...");
-            Console.ReadKey();
-
         }
 
-        private static void DoImport(int month, int year)
+        // Debugging 
+        private static void DumpSettingStats()
         {
-            if (string.IsNullOrEmpty(s.FacilityId))
-                throw new InvalidOperationException("Please configure your facility id in the .config file");
 
+            var exe = Assembly.GetExecutingAssembly();
+            var configfile = new FileInfo(exe.Location + ".config");
+            // Try to open for read since the setting framework does that too
+            Console.WriteLine("Dumping config contents");
+            using (var stream = configfile.OpenText())
+            {
+                Console.WriteLine(stream.ReadToEnd());
+            }
+        }
+
+        private static void DoImport(DateTime from, DateTime to)
+        {
             IList<YieldAggregate> applianceLog;
-            applianceLog = GetPlugwiseYield(month, year);
+            applianceLog = GetPlugwiseYield(from, to);
             Console.WriteLine("Result: {0} days, {1} kWh",
                                 applianceLog.Count,
                                 applianceLog.Sum(log => log.Yield));
@@ -55,41 +76,30 @@ namespace PlugwiseImporter
             {
                 Console.WriteLine("{0} \t{1}", item.Date, item.Yield);
             }
-            var credentials = GetCredentials();
 
-            var logincookie = GetLoginSession(credentials);
-            UploadHistory(applianceLog, logincookie);
+            if (!string.IsNullOrWhiteSpace(s.PvOutputApiKey))
+                new PvOutputApiUploader().Push(applianceLog);
+
+            if (!string.IsNullOrWhiteSpace(s.InsertUri))
+                new SonnenErtragUploader().Push(applianceLog);
         }
 
-        private static NetworkCredential GetCredentials()
-        {
-            var user = s.Username;
-            var password = s.Password;
-            // it is to be expected that not everybody likes to put their credentials in plain text on disk
-            if (string.IsNullOrEmpty(user))
-            {  
-                Console.WriteLine("Username:");
-                user = Console.ReadLine();
-            }
-            if (string.IsNullOrEmpty(password))
-            {
-                Console.WriteLine("Password:");
-                password = Console.ReadLine();
-            }
-            var credentials = new NetworkCredential(user, password);
-            return credentials;
-        }
-
-        private static bool TryParse(string arg, string option, ref int value)
+        private static bool TryParse<T>(string arg, string option, ref T value)
         {
             if (arg.Contains(option))
             {
                 var val = arg.Split('=');
                 if (val.Length != 2)
                     throw new ArgumentException(string.Format("Expecting {0}=<int>, no value given", option));
-                if (!int.TryParse(val[1], out value))
-                    throw new ArgumentException(string.Format("Expecting {0}=<int>, could not parse {1}", option, val[1]));
-                return true;
+                try
+                {
+                    T result = (T)Convert.ChangeType(val[1], typeof(T));
+                    value = result; return true;
+                }
+                catch (Exception)
+                {
+                    throw new ArgumentException(string.Format("Expecting {0}=<{2}>, could not parse {1}", option, val[1], typeof(T).Name));
+                }
             }
             return false;
         }
@@ -97,11 +107,13 @@ namespace PlugwiseImporter
         /// <summary>
         /// Queries the plugwise database for the yield in the given month.
         /// </summary>
-        /// <param name="month"></param>
-        /// <param name="year"></param>
+        /// <param name="from">start point, inclusive</param>
+        /// <param name="to">start point, inclusive</param>
         /// <returns></returns>
-        private static IList<YieldAggregate> GetPlugwiseYield(int month, int year)
+        private static IList<YieldAggregate> GetPlugwiseYield(DateTime from, DateTime to)
         {
+            from = from.Date;
+            to = to.Date.AddDays(1);
             var dbPath = GetPlugwiseDatabase();
             Console.WriteLine("Loading Plugwise data from {0}", dbPath);
 
@@ -116,11 +128,12 @@ namespace PlugwiseImporter
                 var latest = (from log in db.Appliance_Logs
                               select log).ToList();
 
-                Console.WriteLine("Loading plugwise production data for year={0} month={1}", year, month);
+                Console.WriteLine("Loading plugwise production data between {0} and {1}", from, to);
 
                 var applianceLog = (from log in latest
-                                    where log.LogDate.Month == month && log.LogDate.Year == year
-                                     && (log.Usage_offpeak + log.Usage_peak) < 0
+                                    where
+                                      (log.LogDate >= @from) && (log.LogDate <= to) &&
+                                      (log.Usage_offpeak + log.Usage_peak) < 0
                                     group log by log.LogDate into logsbydate
                                     orderby logsbydate.Key
                                     select new YieldAggregate
@@ -148,130 +161,24 @@ namespace PlugwiseImporter
                 @"..\Local\Plugwise\Source\DB\PlugwiseData.mdb"));
         }
 
-        private static void UploadHistory(IEnumerable<YieldAggregate> applianceLog, WebHeaderCollection logincookie)
+    }
+
+    public interface IUploadMethod
+    {
+        void Push(IEnumerable<YieldAggregate> values);
+    }
+
+    public class PvOutputCsvWriter : IUploadMethod
+    {
+        public void Push(IEnumerable<YieldAggregate> values)
         {
-            var uri = new Uri(s.InsertUri);
-
-            var values = new NameValueCollection();
-
-            Console.WriteLine("Uploading yield for FacilityId {0}", s.FacilityId);
-
-            foreach (var log in applianceLog)
-            {
-                var dateformatted = log.Date.ToString("yyyy-MM-dd");
-                values.Add(string.Format("yield[{0}]", dateformatted), log.Yield.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture));
-                values.Add(string.Format("is_auto_update[{0}]", dateformatted), "1");
-            }
-
-            values.Add("year", applianceLog.First().Date.Year.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            values.Add("save", "Save");
-            values.Add("pb_id", Settings.Default.FacilityId.ToString(System.Globalization.CultureInfo.InvariantCulture));
-            values.Add("order", "asc");
-
-            values.Add("month", applianceLog.First().Date.Month.ToString(System.Globalization.CultureInfo.InvariantCulture));
-
-            using (WebClient client = new WebClient())
-            {
-                client.Headers.Add(logincookie);
-                var response = Encoding.ASCII.GetString(client.UploadValues(uri, values));
-                Console.WriteLine("Success: {0}", response.Contains("Data saved!"));
-                File.WriteAllText("response.html", response);
-            }
-        }
-
-        /// <summary>
-        /// Logs in and returns the login cookie.
-        /// Throws when login is not successful.
-        /// </summary>
-        /// <returns></returns>
-        private static WebHeaderCollection GetLoginSession(NetworkCredential credentials)
-        {
-            Console.WriteLine("Logging in as {0}", credentials.UserName);
-            var uri = new Uri(Settings.Default.LoginUri);
-            NameValueCollection logindetails = new NameValueCollection
-            {
-                { "user", credentials.UserName},
-                { "password", credentials.Password},
-                { "submit", "Login" },
-            };
-
-            using (WebClient client = new WebClient())
-            {
-                client.Credentials = credentials;
-                var response = Encoding.ASCII.GetString(client.UploadValues(uri, logindetails));
-                Console.WriteLine("Login result: {0}", response);
-                var result = new WebHeaderCollection();
-                result.Add(HttpRequestHeader.Cookie, client.ResponseHeaders[HttpResponseHeader.SetCookie]);
-                return result;
-            }
+            File.WriteAllLines("output.csv", values.Select(
+                v => string.Format("{0},{1}",
+                    v.Date.ToString(@"dd\/MM\/yy"),
+                    (v.Yield * 1000).ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    )));
         }
     }
+
+
 }
-/*
- Request URL:
-    http://www.solar-yield.eu/plant/insertdatadaily
-  
-  
-    Request Method:
-    POST
-  
-  
-    Status Code:
-    HTTP/1.1 200 OK
-  
-
-
-
-  
-    Request Headers
-    20:44:43.000
-  
-  User-Agent:Mozilla/5.0 (Windows NT 6.1; rv:21.0) Gecko/20100101 Firefox/21.0
- * Referer:http://www.solar-yield.eu/plant/insertdatadaily
- * Host:www.solar-yield.eu
- * Connection:keep-alive
- * Accept-Language:en-gb,en;q=0.5
- * Accept-Encoding:gzip, deflate
- * Accept:text/html,application/xhtml+xml,application/xml;q=0.9,**;q=0.8
-
-  
-    Sent Cookie
-    sun_login:6209dab34e5e0c5d8f102a2b048bcf35
- * PHPSESSID:6d0d876fc1998877686acad297710f9f
- * __utmz:46453029.1366650945.1.1.utmcsr=sonnenertrag.eu|utmccn=(referral)|utmcmd=referral|utmcct=/
- * __utmc:46453029
- * __utmb:46453029.9.10.1366653408
- * __utma:46453029.533701124.1366650945.1366650945.1366653407.2
-  
-
-  
-  
-    Sent Form Data
-    yield[2013-04-22]:
- * yield[2013-04-21]:7.10
- * yield[2013-04-20]:7.39
- * yield[2013-04-19]:5.03
- * yield[2013-04-18]:7.43
- * yield[2013-04-17]:3.56
- * yield[2013-04-16]:2.70
- * yield[2013-04-15]:4.28
- * yield[2013-04-14]:5.09
- * yield[2013-04-13]:4.85
- * yield[2013-04-12]:2.19
- * yield[2013-04-11]:0.86
- * yield[2013-04-10]:1.62
- * yield[2013-04-09]:2.17
- * yield[2013-04-08]:4.52
- * yield[2013-04-07]:6.13
- * yield[2013-04-06]:5.46
- * yield[2013-04-05]:3.08
- * yield[2013-04-04]:2.27
- * yield[2013-04-03]:3.41
- * yield[2013-04-02]:6.96
- * yield[2013-04-01]:5.66
- * year:2013
- * save:Save
- * pb_id:20456
- * order:asc
- * month:4
- */
