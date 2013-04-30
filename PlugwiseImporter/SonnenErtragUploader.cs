@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Net;
 using System.Collections.Specialized;
-using PlugwiseImporter.Properties;
 using System.IO;
 
 namespace PlugwiseImporter
@@ -12,7 +11,11 @@ namespace PlugwiseImporter
 
     public class SonnenErtragUploader : IUploadMethod
     {
-        static Settings s = Settings.Default;
+        private string _loginUri = @"http://www.solar-yield.eu/ajax/user/login";
+        private string _insertUri = @"http://www.solar-yield.eu/plant/insertdatadaily";
+        string _user;
+        string _password;
+        string _facilityId;
 
         public void Push(IEnumerable<YieldAggregate> applianceLog)
         {
@@ -28,14 +31,13 @@ namespace PlugwiseImporter
 
         private void UploadHistory(IEnumerable<YieldAggregate> applianceLog, WebHeaderCollection logincookie)
         {
-            var uri = new Uri(s.InsertUri);
+            var uri = new Uri(_insertUri);
 
             var values = new NameValueCollection();
 
-            string facilityId = s.FacilityId;
-            Utils.AskIfNullOrEmpty("FacilityId:", ref facilityId);
+            Utils.AskIfNullOrEmpty("FacilityId:", ref _facilityId);
 
-            Console.WriteLine("Uploading yield for FacilityId {0}", facilityId);
+            Console.WriteLine("Uploading yield for FacilityId {0}", _facilityId);
 
             foreach (var log in applianceLog)
             {
@@ -46,7 +48,7 @@ namespace PlugwiseImporter
 
             values.Add("year", applianceLog.First().Date.Year.ToString(System.Globalization.CultureInfo.InvariantCulture));
             values.Add("save", "Save");
-            values.Add("pb_id", Settings.Default.FacilityId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+            values.Add("pb_id", _facilityId);
             values.Add("order", "asc");
 
             values.Add("month", applianceLog.First().Date.Month.ToString(System.Globalization.CultureInfo.InvariantCulture));
@@ -62,13 +64,11 @@ namespace PlugwiseImporter
 
         private NetworkCredential GetCredentials()
         {
-            var user = s.Username;
-            var password = s.Password;
             // it is to be expected that not everybody likes to put their credentials in plain text on disk
-            Utils.AskIfNullOrEmpty("Username:", ref user);
-            Utils.AskIfNullOrEmpty("Password:", ref password);
+            Utils.AskIfNullOrEmpty("Username:", ref _user);
+            Utils.AskIfNullOrEmpty("Password:", ref _password);
 
-            var credentials = new NetworkCredential(user, password);
+            var credentials = new NetworkCredential(_user, _password);
             return credentials;
         }
 
@@ -80,7 +80,7 @@ namespace PlugwiseImporter
         private WebHeaderCollection GetLoginSession(NetworkCredential credentials)
         {
             Console.WriteLine("Logging in as {0}", credentials.UserName);
-            var uri = new Uri(Settings.Default.LoginUri);
+            var uri = new Uri(_loginUri);
             NameValueCollection logindetails = new NameValueCollection
             {
                 { "user", credentials.UserName},
@@ -97,6 +97,14 @@ namespace PlugwiseImporter
                 result.Add(HttpRequestHeader.Cookie, client.ResponseHeaders[HttpResponseHeader.SetCookie]);
                 return result;
             }
+        }
+
+
+        public bool TryParse(string arg)
+        {
+            return Program.TryParse(arg, "seuser", ref _user)
+                || Program.TryParse(arg, "sepass", ref _password)
+                || Program.TryParse(arg, "sefacilityid", ref _facilityId);
         }
     }
 }

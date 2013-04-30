@@ -6,18 +6,23 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Data.OleDb;
 using System.Net;
-using System.Collections.Specialized;
-using PlugwiseImporter.Properties;
 using System.Reflection;
 
 namespace PlugwiseImporter
 {
     class Program
     {
-        static Settings s = Settings.Default;
+        private static string _plugwiseAppliances;
+        private static IUploadMethod[] _plugins;
+        private static Dictonary<string, string> _helptext = new Dictionary<string, string>();
 
         static void Main(string[] args)
         {
+            _plugins = new IUploadMethod[]
+            {
+                new SonnenErtragUploader(),
+                new PvOutputApiUploader(),
+            };
             try
             {
                 var days = 14;
@@ -26,6 +31,7 @@ namespace PlugwiseImporter
                 string unused = string.Empty;
                 foreach (var arg in args)
                 {
+                    if (TryParse(arg, "list", ListAppliances)) continue;
                     if (TryParse(arg, "days", ref days))
                     {
                         from = to.AddDays(-days);
@@ -33,10 +39,13 @@ namespace PlugwiseImporter
                     }
                     if (TryParse(arg, "from", ref from)) continue;
                     if (TryParse(arg, "to", ref to)) continue;
-                    if (TryParse(arg, "dumpconfig", ref unused))
+
+                    foreach (var plugin in _plugins)
                     {
-                        DumpSettingStats();
+                        if (plugin.TryParse(arg)) continue;
                     }
+                    // fallthrough: only when argument is not parsed
+                    throw new ArgumentException("Unknown argument: {0}", arg);
                 }
 
                 DoImport(from, to);
@@ -50,24 +59,26 @@ namespace PlugwiseImporter
             }
         }
 
-        // Debugging 
-        private static void DumpSettingStats()
+        private static void ListAppliances()
         {
 
-            var exe = Assembly.GetExecutingAssembly();
-            var configfile = new FileInfo(exe.Location + ".config");
-            // Try to open for read since the setting framework does that too
-            Console.WriteLine("Dumping config contents");
-            using (var stream = configfile.OpenText())
+            var dbPath = GetPlugwiseDatabase();
+            Console.WriteLine("Loading Plugwise data from {0}", dbPath);
+
+            string dbConnString = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source='" + dbPath + "';Persist Security Info=False;";
+            using (var connection = new OleDbConnection(dbConnString))
+            using (var db = new PlugwiseDataContext(connection))
             {
-                Console.WriteLine(stream.ReadToEnd());
+                var allapps = (from app in db.Appliances select app);
+                foreach (var app in allapps)
+                    Console.WriteLine("{0}\t=\t{1}", app.Name, app.ID);
             }
         }
 
         private static void DoImport(DateTime from, DateTime to)
         {
             IList<YieldAggregate> applianceLog;
-            var appliances = s.PlugwiseAppliances.Cast<string>().Where(app => !string.IsNullOrWhiteSpace(app)).ToList();
+            var appliances = _plugwiseAppliances.Split(',').Select(s => int.Parse(s));
 
             applianceLog = GetPlugwiseYield(from, to, appliances);
             Console.WriteLine("Result: {0} days, {1} kWh",
@@ -79,28 +90,40 @@ namespace PlugwiseImporter
                 Console.WriteLine("{0} \t{1}", item.Date, item.Yield);
             }
 
-            if (!string.IsNullOrWhiteSpace(s.PvOutputApiKey))
-                new PvOutputApiUploader().Push(applianceLog);
-
-            if (!string.IsNullOrWhiteSpace(s.InsertUri))
-                new SonnenErtragUploader().Push(applianceLog);
+            foreach (var plugin in _plugins)
+            {
+            }
         }
 
-        private static bool TryParse<T>(string arg, string option, ref T value)
+        public static bool TryParse(string arg, string option, Action a, string helptext = "")
         {
-            if (arg.Contains(option))
+            _helptext[option] = string.Format("{0}\t{1}", option, helptext);
+            if (arg == option)
+            {
+                a();
+                return true;
+            }
+            return false;
+        }
+
+        public static bool TryParse<T>(string arg, string option, ref T value, string helptext = "")
+        {
+            var type = typeof(T);
+            _helptext[option] = string.Format("{0}=<{1}>\t{2}", option, type.Name, helptext);
+            if (arg.StartsWith(option))
             {
                 var val = arg.Split('=');
                 if (val.Length != 2)
-                    throw new ArgumentException(string.Format("Expecting {0}=<int>, no value given", option));
+                    throw new ArgumentException(string.Format("Expecting {0}=<{2}>, no value given", option, type.Name));
+                if (val[0] != option) return false;
                 try
                 {
-                    T result = (T)Convert.ChangeType(val[1], typeof(T));
+                    T result = (T)Convert.ChangeType(val[1], type);
                     value = result; return true;
                 }
                 catch (Exception)
                 {
-                    throw new ArgumentException(string.Format("Expecting {0}=<{2}>, could not parse {1}", option, val[1], typeof(T).Name));
+                    throw new ArgumentException(string.Format("Expecting {0}=<{2}>, could not parse {1}", option, val[1], type.Name));
                 }
             }
             return false;
@@ -112,7 +135,7 @@ namespace PlugwiseImporter
         /// <param name="from">start point, inclusive</param>
         /// <param name="to">start point, inclusive</param>
         /// <returns></returns>
-        private static IList<YieldAggregate> GetPlugwiseYield(DateTime from, DateTime to, IList<string> appliances)
+        private static IList<YieldAggregate> GetPlugwiseYield(DateTime from, DateTime to, IEnumerable<int> applianceIds)
         {
 
             from = from.Date;
@@ -128,10 +151,10 @@ namespace PlugwiseImporter
                 // As a workaround we list the complete table and use linq to objects for the filter
                 // This presents some scalability issues and should be looked in to.
                 List<Appliance_Log> latest;
-                if (!appliances.Any())
+                if (!applianceIds.Any())
                     latest = LoadAllData(db);
                 else
-                    latest = LoadApplianceData(db, appliances);
+                    latest = LoadApplianceData(db, applianceIds);
 
                 Console.WriteLine("Loading plugwise production data between {0} and {1}", from, to);
 
@@ -151,14 +174,16 @@ namespace PlugwiseImporter
             }
         }
 
-        private static List<Appliance_Log> LoadApplianceData(PlugwiseDataContext db, IList<string> appliances)
+        private static List<Appliance_Log> LoadApplianceData(PlugwiseDataContext db, IEnumerable<int> appliances)
         {
             // Two-part query to work around linq-to-Access limitations
-            var apps = (from app in db.Appliances select app)
-                .ToList().Where(app => appliances.Contains(app.Name));
+            var allapps = (from app in db.Appliances select app)
+                .ToDictionary(app => app.ID);
 
-            Console.WriteLine("Found {0}", string.Join(";", apps.Select(a=>a.Name)));
-          
+            var apps = appliances.Select(id => allapps[id]);
+
+            Console.WriteLine("Found {0}", string.Join(";", apps.Select(a => a.Name)));
+
             var applogs = apps.SelectMany(app =>
                            (from log in db.Appliance_Logs
                             where log.ApplianceID == app.ID
@@ -182,12 +207,12 @@ namespace PlugwiseImporter
         /// <returns>the expected plugwise database</returns>
         private static FileInfo GetPlugwiseDatabase()
         {
-            var path = s.PlugwiseDatabasePath;
-            if (!string.IsNullOrEmpty(path))
-                return new FileInfo(path);
-            else return new FileInfo(Path.Combine(
+            var _plugwisepath = "";
+            if (string.IsNullOrEmpty(_plugwisepath))
+                _plugwisepath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                @"..\Local\Plugwise\Source\DB\PlugwiseData.mdb"));
+                @"..\Local\Plugwise\Source\DB\PlugwiseData.mdb");
+            return new FileInfo(_plugwisepath);
         }
 
     }
@@ -195,6 +220,8 @@ namespace PlugwiseImporter
     public interface IUploadMethod
     {
         void Push(IEnumerable<YieldAggregate> values);
+
+        bool TryParse(string arg);
     }
 
     public class PvOutputCsvWriter : IUploadMethod
@@ -206,6 +233,12 @@ namespace PlugwiseImporter
                     v.Date.ToString(@"dd\/MM\/yy"),
                     (v.Yield * 1000).ToString(System.Globalization.CultureInfo.InvariantCulture)
                     )));
+        }
+
+
+        public bool TryParse(string arg)
+        {
+            return false;
         }
     }
 

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Net;
 using System.IO;
-using PlugwiseImporter.Properties;
 using System.Collections.Specialized;
 
 namespace PlugwiseImporter
@@ -12,19 +11,18 @@ namespace PlugwiseImporter
 
     public class PvOutputApiUploader : IUploadMethod
     {
-        Settings s = Settings.Default;
+        string _outputSystemId;
+        string _apiKey;
 
         public void Push(IEnumerable<YieldAggregate> applianceLog)
         {
             // Adds per-day totals
             var uri = new Uri(@"http://pvoutput.org/service/r2/addoutput.jsp");
 
-            var outputSystemId = s.PvOutputSystemId;
-            Utils.AskIfNullOrEmpty("Output system Id:", ref outputSystemId);
-            var apiKey = s.PvOutputApiKey;
-            Utils.AskIfNullOrEmpty("API Key:", ref apiKey);
+            Utils.AskIfNullOrEmpty("Output system Id:", ref _outputSystemId);
+            Utils.AskIfNullOrEmpty("API Key:", ref _apiKey);
 
-            Console.WriteLine("Uploading yield for SystemId... {0}", outputSystemId);
+            Console.WriteLine("Uploading yield for SystemId... {0}", _outputSystemId);
 
             foreach (var log in applianceLog)
             {
@@ -33,14 +31,20 @@ namespace PlugwiseImporter
                 values.Add("data", data.ToString());
                 using (WebClient client = new WebClient())
                 {
-                    client.Headers.Add("X-Pvoutput-Apikey", apiKey);
-                    client.Headers.Add("X-Pvoutput-SystemId", outputSystemId);
+                    client.Headers.Add("X-Pvoutput-Apikey", _apiKey);
+                    client.Headers.Add("X-Pvoutput-SystemId", _outputSystemId);
 
                     var response = Encoding.ASCII.GetString(client.UploadValues(uri, values));
                     Console.WriteLine("Data: {0} Response: {1}", data, response);
                     File.WriteAllText("response.html", response);
                 }
             }
+        }
+
+        public bool TryParse(string arg)
+        {
+            return Program.TryParse(arg, "pvsystemid", ref _outputSystemId)
+                || Program.TryParse(arg, "pvapikey", ref _apiKey);
         }
     }
 }

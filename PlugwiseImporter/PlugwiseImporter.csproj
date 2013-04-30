@@ -51,11 +51,6 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Properties\Settings.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-      <DependentUpon>Settings.settings</DependentUpon>
-    </Compile>
     <Compile Include="PvOutputApiUploader.cs" />
     <Compile Include="SonnenErtragUploader.cs" />
     <Compile Include="Utils.cs" />
@@ -65,7 +60,6 @@
     <Service Include="{3259AA49-8AA1-44D3-9025-A0B520596A8C}" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
     <None Include="Plugwise.dbml">
       <SubType>Designer</SubType>
       <Generator>MSLinqToSQLGenerator</Generator>
@@ -73,10 +67,6 @@
     </None>
     <None Include="Plugwise.dbml.layout">
       <DependentUpon>Plugwise.dbml</DependentUpon>
-    </None>
-    <None Include="Properties\Settings.settings">
-      <Generator>SettingsSingleFileGenerator</Generator>
-      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
