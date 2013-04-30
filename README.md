@@ -1,7 +1,8 @@
 PlugwiseImporter
 ================
 
-Glue logic to update the SonnenErtrag (solar-yield) database with Plugwise readouts
+Glue logic to update the SonnenErtrag (solar-yield) database with Plugwise readouts.
+Can update PvOutput.org too.
 
 Requirements: 
  * .Net 4.0 (client profile)
