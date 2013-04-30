@@ -1,10 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8"?><Database Class="PlugwiseDataContext" xmlns="http://schemas.microsoft.com/linqtosql/dbml/2007">
   <Table Name="" Member="Appliance_Logs">
     <Type Name="Appliance_Log">
-      <Column Member="LogDate" Type="System.DateTime" CanBeNull="false" />
-      <Column Member="ApplianceID" Type="System.Int32" CanBeNull="false" />
-      <Column Member="Usage_peak" Type="System.Double" CanBeNull="false" />
-      <Column Member="Usage_offpeak" Type="System.Double" CanBeNull="false" />
+      <Column Name="LogDate" Type="System.DateTime" CanBeNull="false" />
+      <Column Name="ApplianceID" Type="System.Int32" CanBeNull="false" />
+      <Column Name="Usage_peak" Type="System.Double" CanBeNull="false" />
+      <Column Name="Usage_offpeak" Type="System.Double" CanBeNull="false" />
+      <Association Name="Appliance_Appliance_Log" Member="Appliance" ThisKey="ApplianceID" OtherKey="ID" Type="Appliance" IsForeignKey="true" />
+    </Type>
+  </Table>
+  <Table Name="" Member="Appliances">
+    <Type Name="Appliance">
+      <Column Member="ID" Type="System.Int32" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Member="Type" Type="System.String" CanBeNull="false" />
+      <Column Member="Name" Type="System.String" CanBeNull="false" />
+      <Association Name="Appliance_Appliance_Log" Member="Appliance_Logs" ThisKey="ID" OtherKey="ApplianceID" Type="Appliance_Log" />
     </Type>
   </Table>
 </Database>

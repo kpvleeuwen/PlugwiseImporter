@@ -71,15 +71,6 @@ namespace PlugwiseImporter.Properties {
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string FacilityId {
-            get {
-                return ((string)(this["FacilityId"]));
-            }
-        }
-        
-        [global::System.Configuration.ApplicationScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string PvOutputSystemId {
             get {
                 return ((string)(this["PvOutputSystemId"]));
@@ -92,6 +83,26 @@ namespace PlugwiseImporter.Properties {
         public string PvOutputApiKey {
             get {
                 return ((string)(this["PvOutputApiKey"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string FacilityId {
+            get {
+                return ((string)(this["FacilityId"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("<?xml version=\"1.0\" encoding=\"utf-16\"?>\r\n<ArrayOfString xmlns:xsi=\"http://www.w3." +
+            "org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\">\r\n  <s" +
+            "tring>Omvormer onder</string>\r\n</ArrayOfString>")]
+        public global::System.Collections.Specialized.StringCollection PlugwiseAppliances {
+            get {
+                return ((global::System.Collections.Specialized.StringCollection)(this["PlugwiseAppliances"]));
             }
         }
     }

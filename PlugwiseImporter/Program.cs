@@ -67,7 +67,9 @@ namespace PlugwiseImporter
         private static void DoImport(DateTime from, DateTime to)
         {
             IList<YieldAggregate> applianceLog;
-            applianceLog = GetPlugwiseYield(from, to);
+            var appliances = s.PlugwiseAppliances.Cast<string>().Where(app => !string.IsNullOrWhiteSpace(app)).ToList();
+
+            applianceLog = GetPlugwiseYield(from, to, appliances);
             Console.WriteLine("Result: {0} days, {1} kWh",
                                 applianceLog.Count,
                                 applianceLog.Sum(log => log.Yield));
@@ -110,8 +112,9 @@ namespace PlugwiseImporter
         /// <param name="from">start point, inclusive</param>
         /// <param name="to">start point, inclusive</param>
         /// <returns></returns>
-        private static IList<YieldAggregate> GetPlugwiseYield(DateTime from, DateTime to)
+        private static IList<YieldAggregate> GetPlugwiseYield(DateTime from, DateTime to, IList<string> appliances)
         {
+
             from = from.Date;
             to = to.Date.AddDays(1);
             var dbPath = GetPlugwiseDatabase();
@@ -124,9 +127,11 @@ namespace PlugwiseImporter
                 // Querying on a datetime fails somehow
                 // As a workaround we list the complete table and use linq to objects for the filter
                 // This presents some scalability issues and should be looked in to.
-
-                var latest = (from log in db.Appliance_Logs
-                              select log).ToList();
+                List<Appliance_Log> latest;
+                if (!appliances.Any())
+                    latest = LoadAllData(db);
+                else
+                    latest = LoadApplianceData(db, appliances);
 
                 Console.WriteLine("Loading plugwise production data between {0} and {1}", from, to);
 
@@ -144,6 +149,30 @@ namespace PlugwiseImporter
                                       .ToList();
                 return applianceLog;
             }
+        }
+
+        private static List<Appliance_Log> LoadApplianceData(PlugwiseDataContext db, IList<string> appliances)
+        {
+            // Two-part query to work around linq-to-Access limitations
+            var apps = (from app in db.Appliances select app)
+                .ToList().Where(app => appliances.Contains(app.Name));
+
+            Console.WriteLine("Found {0}", string.Join(";", apps.Select(a=>a.Name)));
+          
+            var applogs = apps.SelectMany(app =>
+                           (from log in db.Appliance_Logs
+                            where log.ApplianceID == app.ID
+                            select log)
+                           ).ToList();
+            return applogs;
+        }
+
+        private static List<Appliance_Log> LoadAllData(PlugwiseDataContext db)
+        {
+
+            var latest = (from log in db.Appliance_Logs
+                          select log).ToList();
+            return latest;
         }
 
         /// <summary>
