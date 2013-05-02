@@ -15,9 +15,11 @@ namespace PlugwiseImporter
         private static string _plugwiseAppliances = string.Empty; // empty means 'All negative (Production) values found'
         private static IUploadMethod[] _plugins;
         private static Dictionary<string, string> _helptext = new Dictionary<string, string>();
-        private static DateTime _from;
+        private static HashSet<string> _parsedArguments = new HashSet<string>();
         private static DateTime _to;
         private static int _days;
+
+        private static bool _verbose;
 
         static void Main(string[] args)
         {
@@ -32,15 +34,19 @@ namespace PlugwiseImporter
             try
             {
                 _days = 14;
-                _to = DateTime.Now;
-                _from = _to.AddDays(-_days);
+                _to = DateTime.Now.Date.AddDays(1);
                 ParseCommandline(args);
 
-                DoImport(_from, _to);
+                var from = _to.AddDays(-_days);
+                DoImport(from, _to);
             }
             catch (Exception e)
             {
-                Console.Error.WriteLine(e);
+                if (_verbose)
+                    Console.Error.WriteLine(e);
+                else
+                    Console.Error.WriteLine(e.Message);
+
                 // Swallow exceptions because it confuses users
                 // when Windows throws an error report at them (sorry, Microsoft). 
                 Environment.Exit(1); // nonzero error code for scripting support
@@ -51,15 +57,13 @@ namespace PlugwiseImporter
         {
             foreach (var arg in args)
             {
-                if (string.IsNullOrWhiteSpace(arg)) continue;
+                if (string.IsNullOrWhiteSpace(arg)) continue; // for example escaped newlines in batch files
+
                 if (TryParse(arg, "list", ListAppliances, "Lists all appliances with ID in the plugwise database")) continue;
-                if (TryParse(arg, "days", ref _days, "Number of days to load"))
-                {
-                    _from = _to.AddDays(-_days);
-                    continue;
-                }
-                if (TryParse(arg, "from", ref _from, "First date to load")) continue;
-                if (TryParse(arg, "to", ref _to, "Last day to load (not with 'days' option)")) continue;
+                if (TryParse(arg, "appliances", ref _plugwiseAppliances, "Comma-separated list of applianceIDs to use, default: all production")) continue;
+                if (TryParse(arg, "days", ref _days, string.Format("Number of days to load, default: {0}", _days))) continue;
+                if (TryParse(arg, "to", ref _to, "Last day to load, defaults to today")) continue;
+                if (TryParse(arg, "verbose", () => { _verbose = true; }, "Give detailed error messages")) continue;
 
                 if (_plugins.Any(p => p.TryParse(arg))) continue;
 
@@ -141,7 +145,11 @@ namespace PlugwiseImporter
                 try
                 {
                     T result = (T)Convert.ChangeType(val[1], type);
-                    value = result; return true;
+                    value = result;
+                    if (_parsedArguments.Contains(option))
+                        throw new ArgumentException(string.Format("Option {0} can be specified only once", option));
+                    _parsedArguments.Add(option);
+                    return true;
                 }
                 catch (Exception)
                 {
@@ -159,9 +167,6 @@ namespace PlugwiseImporter
         /// <returns></returns>
         private static IList<YieldAggregate> GetPlugwiseYield(DateTime from, DateTime to, IEnumerable<int> applianceIds)
         {
-
-            from = from.Date;
-            to = to.Date.AddDays(1);
             var dbPath = GetPlugwiseDatabase();
             Console.WriteLine("Loading Plugwise data from {0}", dbPath);
 
@@ -244,31 +249,6 @@ namespace PlugwiseImporter
         void Push(IEnumerable<YieldAggregate> values);
 
         bool TryParse(string arg);
-    }
-
-    public class PvOutputCsvWriter : IUploadMethod
-    {
-        private string _filename;
-        public void Push(IEnumerable<YieldAggregate> values)
-        {
-            if (string.IsNullOrEmpty(_filename))
-            {
-                Console.WriteLine("No csvfilename, not using CSV output.");
-                return;
-            }
-
-            File.WriteAllLines(_filename, values.Select(
-                v => string.Format("{0},{1}",
-                    v.Date.ToString(@"dd\/MM\/yy"),
-                    (v.Yield * 1000).ToString(System.Globalization.CultureInfo.InvariantCulture)
-                    )));
-        }
-
-
-        public bool TryParse(string arg)
-        {
-            return Program.TryParse(arg, "csvfilename", ref _filename, "CSV output file tu use with PVOutput.org manual bulk uploading");
-        }
     }
 
 

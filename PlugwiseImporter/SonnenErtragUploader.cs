@@ -15,11 +15,11 @@ namespace PlugwiseImporter
         private string _insertUri = @"http://www.solar-yield.eu/plant/insertdatadaily";
         string _user;
         string _password;
-        string _facilityId;
+        int _facilityId = -1;
 
         public void Push(IEnumerable<YieldAggregate> applianceLog)
         {
-            if (string.IsNullOrEmpty(_facilityId))
+            if (_facilityId <= 0)
             {
                 Console.WriteLine("No SonnenErtrag facilityId, not updating SonnenErtrag.");
                 return;
@@ -52,7 +52,7 @@ namespace PlugwiseImporter
 
             values.Add("year", applianceLog.First().Date.Year.ToString(System.Globalization.CultureInfo.InvariantCulture));
             values.Add("save", "Save");
-            values.Add("pb_id", _facilityId);
+            values.Add("pb_id", _facilityId.ToString(System.Globalization.CultureInfo.InvariantCulture));
             values.Add("order", "asc");
 
             values.Add("month", applianceLog.First().Date.Month.ToString(System.Globalization.CultureInfo.InvariantCulture));
@@ -106,9 +106,9 @@ namespace PlugwiseImporter
 
         public bool TryParse(string arg)
         {
-            return Program.TryParse(arg, "seuser", ref _user, "SonnenErtrag user ID, will be asked when missing.")
-                || Program.TryParse(arg, "sepass", ref _password, "SonnenErtrag password, will be asked when missing.")
-                || Program.TryParse(arg, "sefacilityid", ref _facilityId, "SonnenErtrag FacilityID, when missing SonnenErtrag uploading is disabled.");
+            return Program.TryParse(arg, "sefacilityid", ref _facilityId, "SonnenErtrag FacilityID, when missing SonnenErtrag uploading is disabled.")
+                || Program.TryParse(arg, "seuser", ref _user, "SonnenErtrag user ID, default: ask")
+                || Program.TryParse(arg, "sepass", ref _password, "SonnenErtrag password, default: ask");
         }
     }
 }

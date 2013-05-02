@@ -11,12 +11,12 @@ namespace PlugwiseImporter
 
     public class PvOutputApiUploader : IUploadMethod
     {
-        string _outputSystemId;
+        int _outputSystemId = -1;
         string _apiKey;
 
         public void Push(IEnumerable<YieldAggregate> applianceLog)
         {
-            if (string.IsNullOrEmpty(_outputSystemId))
+            if (_outputSystemId <= 0)
             {
                 Console.WriteLine("No PVOutput.org SystemId, not updating PVOutput.");
                 return;
@@ -37,7 +37,7 @@ namespace PlugwiseImporter
                 using (WebClient client = new WebClient())
                 {
                     client.Headers.Add("X-Pvoutput-Apikey", _apiKey);
-                    client.Headers.Add("X-Pvoutput-SystemId", _outputSystemId);
+                    client.Headers.Add("X-Pvoutput-SystemId", _outputSystemId.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
                     var response = Encoding.ASCII.GetString(client.UploadValues(uri, values));
                     Console.WriteLine("Data: {0} Response: {1}", data, response);
@@ -48,8 +48,8 @@ namespace PlugwiseImporter
 
         public bool TryParse(string arg)
         {
-            return Program.TryParse(arg, "pvsystemid", ref _outputSystemId, "PVOutput.org System Id")
-                || Program.TryParse(arg, "pvapikey", ref _apiKey, "PVOutput.org API Key");
+            return Program.TryParse(arg, "pvsystemid", ref _outputSystemId, "PVOutput.org System Id, when missing PVOutput uploading is disabled.")
+                || Program.TryParse(arg, "pvapikey", ref _apiKey, "PVOutput.org API Key, default: ask");
         }
     }
 }
