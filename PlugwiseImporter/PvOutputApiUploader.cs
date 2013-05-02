@@ -19,7 +19,10 @@ namespace PlugwiseImporter
             // Adds per-day totals
             var uri = new Uri(@"http://pvoutput.org/service/r2/addoutput.jsp");
 
-            Utils.AskIfNullOrEmpty("Output system Id:", ref _outputSystemId);
+            if (string.IsNullOrEmpty(_outputSystemId))
+            {
+                Console.WriteLine("No PVOutput.org SystemId, not updating PVOutput.");
+            }
             Utils.AskIfNullOrEmpty("API Key:", ref _apiKey);
 
             Console.WriteLine("Uploading yield for SystemId... {0}", _outputSystemId);
@@ -43,8 +46,8 @@ namespace PlugwiseImporter
 
         public bool TryParse(string arg)
         {
-            return Program.TryParse(arg, "pvsystemid", ref _outputSystemId)
-                || Program.TryParse(arg, "pvapikey", ref _apiKey);
+            return Program.TryParse(arg, "pvsystemid", ref _outputSystemId, "PVOutput.org System Id")
+                || Program.TryParse(arg, "pvapikey", ref _apiKey, "PVOutput.org API Key");
         }
     }
 }

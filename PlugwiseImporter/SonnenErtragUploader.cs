@@ -35,7 +35,10 @@ namespace PlugwiseImporter
 
             var values = new NameValueCollection();
 
-            Utils.AskIfNullOrEmpty("FacilityId:", ref _facilityId);
+            if (string.IsNullOrEmpty(_facilityId))
+            {
+                Console.WriteLine("No SonnenErtrag facilityId, not updating SonnenErtrag.");
+            }
 
             Console.WriteLine("Uploading yield for FacilityId {0}", _facilityId);
 
@@ -102,9 +105,9 @@ namespace PlugwiseImporter
 
         public bool TryParse(string arg)
         {
-            return Program.TryParse(arg, "seuser", ref _user)
-                || Program.TryParse(arg, "sepass", ref _password)
-                || Program.TryParse(arg, "sefacilityid", ref _facilityId);
+            return Program.TryParse(arg, "seuser", ref _user, "SonnenErtrag user ID, will be asked when missing.")
+                || Program.TryParse(arg, "sepass", ref _password, "SonnenErtrag password, will be asked when missing.")
+                || Program.TryParse(arg, "sefacilityid", ref _facilityId, "SonnenErtrag FacilityID, when missing SonnenErtrag uploading is disabled.");
         }
     }
 }

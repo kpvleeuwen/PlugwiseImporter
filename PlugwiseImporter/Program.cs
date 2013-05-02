@@ -12,12 +12,17 @@ namespace PlugwiseImporter
 {
     class Program
     {
-        private static string _plugwiseAppliances;
+        private static string _plugwiseAppliances = string.Empty; // empty means 'All negative (Production) values found'
         private static IUploadMethod[] _plugins;
-        private static Dictonary<string, string> _helptext = new Dictionary<string, string>();
+        private static Dictionary<string, string> _helptext = new Dictionary<string, string>();
+        private static DateTime _from;
+        private static DateTime _to;
+        private static int _days;
 
         static void Main(string[] args)
         {
+            if (!args.Any())
+                args = new[] { "help" };
             _plugins = new IUploadMethod[]
             {
                 new SonnenErtragUploader(),
@@ -25,37 +30,52 @@ namespace PlugwiseImporter
             };
             try
             {
-                var days = 14;
-                var to = DateTime.Now;
-                var from = to.AddDays(-days);
-                string unused = string.Empty;
-                foreach (var arg in args)
-                {
-                    if (TryParse(arg, "list", ListAppliances)) continue;
-                    if (TryParse(arg, "days", ref days))
-                    {
-                        from = to.AddDays(-days);
-                        continue;
-                    }
-                    if (TryParse(arg, "from", ref from)) continue;
-                    if (TryParse(arg, "to", ref to)) continue;
+                _days = 14;
+                _to = DateTime.Now;
+                _from = _to.AddDays(-_days);
+                ParseCommandline(args);
 
-                    foreach (var plugin in _plugins)
-                    {
-                        if (plugin.TryParse(arg)) continue;
-                    }
-                    // fallthrough: only when argument is not parsed
-                    throw new ArgumentException("Unknown argument: {0}", arg);
-                }
-
-                DoImport(from, to);
+                DoImport(_from, _to);
             }
             catch (Exception e)
             {
                 Console.Error.WriteLine(e);
-                Console.ReadLine();
                 // Swallow exceptions because it confuses users
                 // when Windows throws an error report at them (sorry, Microsoft). 
+                Environment.Exit(1); // nonzero error code for scripting support
+            }
+        }
+
+        private static void ParseCommandline(string[] args)
+        {
+            foreach (var arg in args)
+            {
+                if (TryParse(arg, "list", ListAppliances, "Lists all appliances with ID in the plugwise database")) continue;
+                if (TryParse(arg, "days", ref _days, "Number of days to load"))
+                {
+                    _from = _to.AddDays(-_days);
+                    continue;
+                }
+                if (TryParse(arg, "from", ref _from, "First date to load")) continue;
+                if (TryParse(arg, "to", ref _to, "Last day to load (not with 'days' option)")) continue;
+
+                foreach (var plugin in _plugins)
+                {
+                    if (plugin.TryParse(arg)) continue;
+                }
+                // add help last
+                if (TryParse(arg, "help", ShowHelp, "Displays this summary of supported arguments")) continue;
+                // fallthrough: only when argument is not parsed
+                throw new ArgumentException("Unknown argument: {0}. Try {1} help", arg);
+            }
+        }
+
+        private static void ShowHelp()
+        {
+            Console.WriteLine("Commandline summary:");
+            foreach (var helpvalue in _helptext.Values)
+            {
+                Console.WriteLine(helpvalue);
             }
         }
 
@@ -78,7 +98,7 @@ namespace PlugwiseImporter
         private static void DoImport(DateTime from, DateTime to)
         {
             IList<YieldAggregate> applianceLog;
-            var appliances = _plugwiseAppliances.Split(',').Select(s => int.Parse(s));
+            var appliances = string.IsNullOrEmpty(_plugwiseAppliances) ? new int[] { } : _plugwiseAppliances.Split(',').Select(s => int.Parse(s));
 
             applianceLog = GetPlugwiseYield(from, to, appliances);
             Console.WriteLine("Result: {0} days, {1} kWh",
@@ -97,7 +117,7 @@ namespace PlugwiseImporter
 
         public static bool TryParse(string arg, string option, Action a, string helptext = "")
         {
-            _helptext[option] = string.Format("{0}\t{1}", option, helptext);
+            _helptext[option] = string.Format("{0} {1}", option.PadRight(20, ' '), helptext);
             if (arg == option)
             {
                 a();
@@ -109,7 +129,8 @@ namespace PlugwiseImporter
         public static bool TryParse<T>(string arg, string option, ref T value, string helptext = "")
         {
             var type = typeof(T);
-            _helptext[option] = string.Format("{0}=<{1}>\t{2}", option, type.Name, helptext);
+            var description = string.Format("{0}=<{1}>", option, type.Name).PadRight(20, ' ');
+            _helptext[option] = string.Format("{0} {1}", description, helptext);
             if (arg.StartsWith(option))
             {
                 var val = arg.Split('=');
@@ -226,9 +247,14 @@ namespace PlugwiseImporter
 
     public class PvOutputCsvWriter : IUploadMethod
     {
+        private string _filename;
         public void Push(IEnumerable<YieldAggregate> values)
         {
-            File.WriteAllLines("output.csv", values.Select(
+            if (string.IsNullOrEmpty(_filename))
+            {
+                Console.WriteLine("No csvfilename, not using CSV output.");
+            }
+            File.WriteAllLines(_filename, values.Select(
                 v => string.Format("{0},{1}",
                     v.Date.ToString(@"dd\/MM\/yy"),
                     (v.Yield * 1000).ToString(System.Globalization.CultureInfo.InvariantCulture)
@@ -238,7 +264,7 @@ namespace PlugwiseImporter
 
         public bool TryParse(string arg)
         {
-            return false;
+            return Program.TryParse(arg, "csvfilename", ref _filename, "CSV output file tu use with PVOutput.org manual bulk uploading");
         }
     }
 
