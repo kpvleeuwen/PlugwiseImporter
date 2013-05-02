@@ -27,6 +27,7 @@ namespace PlugwiseImporter
             {
                 new SonnenErtragUploader(),
                 new PvOutputApiUploader(),
+                new PvOutputCsvWriter(),
             };
             try
             {
@@ -59,14 +60,12 @@ namespace PlugwiseImporter
                 if (TryParse(arg, "from", ref _from, "First date to load")) continue;
                 if (TryParse(arg, "to", ref _to, "Last day to load (not with 'days' option)")) continue;
 
-                foreach (var plugin in _plugins)
-                {
-                    if (plugin.TryParse(arg)) continue;
-                }
-                // add help last
-                if (TryParse(arg, "help", ShowHelp, "Displays this summary of supported arguments")) continue;
+                if (_plugins.Any(p => p.TryParse(arg))) continue;
+
+                // add help last so all args have been read
+                if (TryParse(arg, "help", ShowHelp, "Displays this summary of supported arguments")) Environment.Exit(2);
                 // fallthrough: only when argument is not parsed
-                throw new ArgumentException("Unknown argument: {0}. Try {1} help", arg);
+                throw new ArgumentException(string.Format("Unknown argument: {0}. Try {1} help", arg, Path.GetFileName(Assembly.GetExecutingAssembly().Location)));
             }
         }
 
@@ -112,6 +111,7 @@ namespace PlugwiseImporter
 
             foreach (var plugin in _plugins)
             {
+                plugin.Push(applianceLog);
             }
         }
 
@@ -253,7 +253,9 @@ namespace PlugwiseImporter
             if (string.IsNullOrEmpty(_filename))
             {
                 Console.WriteLine("No csvfilename, not using CSV output.");
+                return;
             }
+
             File.WriteAllLines(_filename, values.Select(
                 v => string.Format("{0},{1}",
                     v.Date.ToString(@"dd\/MM\/yy"),
