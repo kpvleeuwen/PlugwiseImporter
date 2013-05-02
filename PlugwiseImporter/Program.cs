@@ -51,6 +51,7 @@ namespace PlugwiseImporter
         {
             foreach (var arg in args)
             {
+                if (string.IsNullOrWhiteSpace(arg)) continue;
                 if (TryParse(arg, "list", ListAppliances, "Lists all appliances with ID in the plugwise database")) continue;
                 if (TryParse(arg, "days", ref _days, "Number of days to load"))
                 {
@@ -90,7 +91,7 @@ namespace PlugwiseImporter
             {
                 var allapps = (from app in db.Appliances select app);
                 foreach (var app in allapps)
-                    Console.WriteLine("{0}\t=\t{1}", app.Name, app.ID);
+                    Console.WriteLine("{0} =\t{1}", app.Name.PadRight(15, ' '), app.ID);
             }
         }
 
@@ -106,7 +107,7 @@ namespace PlugwiseImporter
 
             foreach (var item in applianceLog)
             {
-                Console.WriteLine("{0} \t{1}", item.Date, item.Yield);
+                Console.WriteLine("{0} \t{1}", item.Date.ToString("d"), item.Yield);
             }
 
             foreach (var plugin in _plugins)
@@ -231,8 +232,8 @@ namespace PlugwiseImporter
             var _plugwisepath = "";
             if (string.IsNullOrEmpty(_plugwisepath))
                 _plugwisepath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                @"..\Local\Plugwise\Source\DB\PlugwiseData.mdb");
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                @"Plugwise\Source\DB\PlugwiseData.mdb");
             return new FileInfo(_plugwisepath);
         }
 

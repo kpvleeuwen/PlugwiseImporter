@@ -16,13 +16,15 @@ namespace PlugwiseImporter
 
         public void Push(IEnumerable<YieldAggregate> applianceLog)
         {
-            // Adds per-day totals
-            var uri = new Uri(@"http://pvoutput.org/service/r2/addoutput.jsp");
-
             if (string.IsNullOrEmpty(_outputSystemId))
             {
                 Console.WriteLine("No PVOutput.org SystemId, not updating PVOutput.");
+                return;
             }
+            // Adds per-day totals
+            var uri = new Uri(@"http://pvoutput.org/service/r2/addoutput.jsp");
+
+
             Utils.AskIfNullOrEmpty("API Key:", ref _apiKey);
 
             Console.WriteLine("Uploading yield for SystemId... {0}", _outputSystemId);

@@ -19,6 +19,12 @@ namespace PlugwiseImporter
 
         public void Push(IEnumerable<YieldAggregate> applianceLog)
         {
+            if (string.IsNullOrEmpty(_facilityId))
+            {
+                Console.WriteLine("No SonnenErtrag facilityId, not updating SonnenErtrag.");
+                return;
+            }
+
             var credentials = GetCredentials();
 
             var logincookie = GetLoginSession(credentials);
@@ -34,11 +40,6 @@ namespace PlugwiseImporter
             var uri = new Uri(_insertUri);
 
             var values = new NameValueCollection();
-
-            if (string.IsNullOrEmpty(_facilityId))
-            {
-                Console.WriteLine("No SonnenErtrag facilityId, not updating SonnenErtrag.");
-            }
 
             Console.WriteLine("Uploading yield for FacilityId {0}", _facilityId);
 
