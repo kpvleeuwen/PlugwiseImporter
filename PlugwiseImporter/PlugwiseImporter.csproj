@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="PvOutputCsvWriter.cs" />
     <Compile Include="Plugwise.designer.cs">
       <DependentUpon>Plugwise.dbml</DependentUpon>
       <DesignTime>True</DesignTime>
@@ -52,7 +53,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PvOutputApiUploader.cs" />
-    <Compile Include="PvOutputCsvWriter.cs" />
+    <Compile Include="jSunnyReportsCsvWriter.cs" />
     <Compile Include="SonnenErtragUploader.cs" />
     <Compile Include="Utils.cs" />
     <Compile Include="YieldAggregate.cs" />

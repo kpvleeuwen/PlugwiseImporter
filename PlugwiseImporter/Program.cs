@@ -30,6 +30,7 @@ namespace PlugwiseImporter
                 new SonnenErtragUploader(),
                 new PvOutputApiUploader(),
                 new PvOutputCsvWriter(),
+                new jSunnyReportsCsvWriter(),
             };
             try
             {
