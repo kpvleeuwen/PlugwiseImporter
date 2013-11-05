@@ -103,18 +103,21 @@ namespace PlugwiseImporter
             }
             catch (InvalidOperationException)
             {
-                if (_verbose) DumpProviders();
+                // Assume an OLE DB Provider problem
+                if (_verbose)
+                {
+                    DumpProviders();
+                }
                 throw;
             }
         }
 
         private static void DumpProviders()
         {
-            var reader = OleDbEnumerator.GetRootEnumerator();
-            while (reader.Read())
-            {
-                Console.WriteLine("name={0} description={1}", reader.GetValue(0), reader.GetValue(2));
-            }
+            var lister = OleDbEnumerator.GetRootEnumerator();
+            Console.WriteLine("OleDb enumeration:");
+            while (lister.NextResult())
+                Console.WriteLine("name: {0} description: {1}", lister[0], lister[2]);
         }
 
         private static void DoImport(DateTime from, DateTime to)
