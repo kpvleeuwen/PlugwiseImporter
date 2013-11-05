@@ -91,13 +91,33 @@ namespace PlugwiseImporter
             Console.WriteLine("Loading Plugwise data from {0}", dbPath);
 
             string dbConnString = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source='" + dbPath + "';Persist Security Info=False;";
-            using (var connection = new OleDbConnection(dbConnString))
-            using (var db = new PlugwiseDataContext(connection))
+            try
             {
-                var allapps = (from app in db.Appliances select app);
-                foreach (var app in allapps)
-                    Console.WriteLine("{0} =\t{1}", app.Name.PadRight(15, ' '), app.ID);
+                using (var connection = new OleDbConnection(dbConnString))
+                using (var db = new PlugwiseDataContext(connection))
+                {
+                    var allapps = (from app in db.Appliances select app);
+                    foreach (var app in allapps)
+                        Console.WriteLine("{0} =\t{1}", app.Name.PadRight(15, ' '), app.ID);
+                }
             }
+            catch (InvalidOperationException)
+            {
+                // Assume an OLE DB Provider problem
+                if (_verbose)
+                {
+                    DumpProviders();
+                }
+                throw;
+            }
+        }
+
+        private static void DumpProviders()
+        {
+            var lister = OleDbEnumerator.GetRootEnumerator();
+            Console.WriteLine("OleDb enumeration:");
+            while (lister.NextResult())
+                Console.WriteLine("name: {0} description: {1}", lister[0], lister[2]);
         }
 
         private static void DoImport(DateTime from, DateTime to)
