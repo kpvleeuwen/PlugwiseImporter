@@ -29,6 +29,10 @@ namespace PlugwiseImporter
         {
             return Program.TryParse(arg, "csvfilename", ref _filename, "CSV output file to use with PVOutput.org manual bulk uploading. Disabled when missing.");
         }
+
+        public void PushIntraday(IEnumerable<YieldAggregate> values)
+        {
+        }
     }
 
 }

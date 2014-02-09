@@ -110,5 +110,10 @@ namespace PlugwiseImporter
                 || Program.TryParse(arg, "seuser", ref _user, "SonnenErtrag user ID, default: ask")
                 || Program.TryParse(arg, "sepass", ref _password, "SonnenErtrag password, default: ask");
         }
+
+
+        public void PushIntraday(IEnumerable<YieldAggregate> values)
+        {
+        }
     }
 }

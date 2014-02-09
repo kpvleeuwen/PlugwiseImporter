@@ -30,6 +30,11 @@ namespace PlugwiseImporter
         {
             return Program.TryParse(arg, "jsrdir", ref _outputpath, "Import directory for jSunnyReports. This will create a CSV file for every day with the daily yield. Disabled when missing.");
         }
+
+
+        public void PushIntraday(IEnumerable<YieldAggregate> values)
+        {
+        }
     }
 
 }

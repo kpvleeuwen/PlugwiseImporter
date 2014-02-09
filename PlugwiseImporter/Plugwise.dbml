@@ -10,10 +10,31 @@
   </Table>
   <Table Name="" Member="Appliances">
     <Type Name="Appliance">
-      <Column Member="ID" Type="System.Int32" IsPrimaryKey="true" CanBeNull="false" />
-      <Column Member="Type" Type="System.String" CanBeNull="false" />
-      <Column Member="Name" Type="System.String" CanBeNull="false" />
+      <Column Name="ID" Type="System.Int32" IsPrimaryKey="true" CanBeNull="false" />
+      <Column Name="Type" Type="System.String" CanBeNull="false" />
+      <Column Name="Name" Type="System.String" CanBeNull="false" />
       <Association Name="Appliance_Appliance_Log" Member="Appliance_Logs" ThisKey="ID" OtherKey="ApplianceID" Type="Appliance_Log" />
+      <Association Name="Appliance_Minute_Log_5" Member="Minute_Log_5s" ThisKey="ID" OtherKey="ApplianceID" Type="Minute_Log_5" />
+    </Type>
+  </Table>
+  <Table Name="" Member="Minute_Log_5s">
+    <Type Name="Minute_Log_5">
+      <Column Name="ApplianceID" Type="System.Int32" CanBeNull="false" />
+      <Column Name="LogDate" Type="System.DateTime" CanBeNull="false" />
+      <Column Name="ChangedDate" Type="System.DateTime" CanBeNull="false" />
+      <Column Name="Usage_00" Type="System.Double" CanBeNull="true" />
+      <Column Name="Usage_05" Type="System.Double" CanBeNull="true" />
+      <Column Name="Usage_10" Type="System.Double" CanBeNull="true" />
+      <Column Name="Usage_15" Type="System.Double" CanBeNull="true" />
+      <Column Name="Usage_20" Type="System.Double" CanBeNull="true" />
+      <Column Name="Usage_25" Type="System.Double" CanBeNull="true" />
+      <Column Name="Usage_30" Type="System.Double" CanBeNull="true" />
+      <Column Name="Usage_35" Type="System.Double" CanBeNull="true" />
+      <Column Name="Usage_40" Type="System.Double" CanBeNull="true" />
+      <Column Name="Usage_45" Type="System.Double" CanBeNull="true" />
+      <Column Name="Usage_50" Type="System.Double" CanBeNull="true" />
+      <Column Name="Usage_55" Type="System.Double" CanBeNull="true" />
+      <Association Name="Appliance_Minute_Log_5" Member="Appliance" ThisKey="ApplianceID" OtherKey="ID" Type="Appliance" IsForeignKey="true" />
     </Type>
   </Table>
 </Database>

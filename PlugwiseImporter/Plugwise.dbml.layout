@@ -14,11 +14,24 @@
         <elementListCompartment Id="3c01d03c-1e9f-4947-86a3-a97cd40e1455" absoluteBounds="1.39, 3.585, 1.9700000000000002, 0.8262939453125" name="DataPropertiesCompartment" titleTextColor="Black" itemTextColor="Black" />
       </nestedChildShapes>
     </classShape>
-    <associationConnector edgePoints="[(2.375 : 3.125); (2.375 : 2.70359537760417)]" fixedFrom="Algorithm" fixedTo="Algorithm">
+    <associationConnector edgePoints="[(2.96875 : 3.125); (2.96875 : 2.70359537760417)]" fixedFrom="NotFixed" fixedTo="NotFixed">
       <AssociationMoniker Name="/PlugwiseDataContext/Appliance/Appliance_Appliance_Log" />
       <nodes>
         <classShapeMoniker Id="dd17aa34-90d0-4a20-b1ab-f031b864a1d9" />
         <classShapeMoniker Id="09615c9d-6f11-48a2-9507-d31902fc3d01" />
+      </nodes>
+    </associationConnector>
+    <classShape Id="0cce0c81-fc2a-4126-9334-f0de7cbfbabd" absoluteBounds="4.25, 1.375, 2, 3.6939111328124996">
+      <DataClassMoniker Name="/PlugwiseDataContext/Minute_Log_5" />
+      <nestedChildShapes>
+        <elementListCompartment Id="6b4f5efd-212f-48c4-aa53-791d625114ed" absoluteBounds="4.265, 1.835, 1.9700000000000002, 3.1339111328125" name="DataPropertiesCompartment" titleTextColor="Black" itemTextColor="Black" />
+      </nestedChildShapes>
+    </classShape>
+    <associationConnector edgePoints="[(2.375 : 3.125); (2.375 : 2.95359537760417); (2.88541666666667 : 2.95359537760417 : JumpStart); (3.05208333333333 : 2.95359537760417 : JumpEnd); (4 : 2.95359537760417); (4 : 2.17447177010995); (4.25 : 2.17447177010995)]" fixedFrom="Algorithm" fixedTo="Caller">
+      <AssociationMoniker Name="/PlugwiseDataContext/Appliance/Appliance_Minute_Log_5" />
+      <nodes>
+        <classShapeMoniker Id="dd17aa34-90d0-4a20-b1ab-f031b864a1d9" />
+        <classShapeMoniker Id="0cce0c81-fc2a-4126-9334-f0de7cbfbabd" />
       </nodes>
     </associationConnector>
   </nestedChildShapes>

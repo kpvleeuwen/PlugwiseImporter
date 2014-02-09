@@ -20,6 +20,7 @@ namespace PlugwiseImporter
         private static int _days;
 
         private static bool _verbose;
+        private static IEnumerable<int> _appliances;
 
         static void Main(string[] args)
         {
@@ -34,12 +35,21 @@ namespace PlugwiseImporter
             };
             try
             {
-                _days = 14;
+                _days = -1;
                 _to = DateTime.Now.Date.AddDays(1);
+                var from = Properties.Settings.Default.LastIntraDay;
                 ParseCommandline(args);
 
-                var from = _to.AddDays(-_days);
-                DoImport(from, _to);
+                if (_days > 0)
+                    from = _to.AddDays(-_days);
+                else if (_verbose)
+                {
+                    Console.WriteLine("Using last uploaded moment '{0}' as from", from);
+                }
+
+                DoDailyImport(from, _to);
+
+                DoIntradayImport(from);
             }
             catch (Exception e)
             {
@@ -56,12 +66,13 @@ namespace PlugwiseImporter
 
         private static void ParseCommandline(string[] args)
         {
+            string plugwiseAppliances = null;
             foreach (var arg in args)
             {
                 if (string.IsNullOrWhiteSpace(arg)) continue; // for example escaped newlines in batch files
 
                 if (TryParse(arg, "list", ListAppliances, "Lists all appliances with ID in the plugwise database")) continue;
-                if (TryParse(arg, "appliances", ref _plugwiseAppliances, "Comma-separated list of applianceIDs to use, default: all production")) continue;
+                if (TryParse(arg, "appliances", ref plugwiseAppliances, "Comma-separated list of applianceIDs to use, default: all production")) continue;
                 if (TryParse(arg, "days", ref _days, string.Format("Number of days to load, default: {0}", _days))) continue;
                 if (TryParse(arg, "to", ref _to, "Last day to load, defaults to today")) continue;
                 if (TryParse(arg, "verbose", () => { _verbose = true; }, "Give detailed error messages")) continue;
@@ -73,6 +84,8 @@ namespace PlugwiseImporter
                 // fallthrough: only when argument is not parsed
                 throw new ArgumentException(string.Format("Unknown argument: {0}. Try {1} help", arg, Path.GetFileName(Assembly.GetExecutingAssembly().Location)));
             }
+            _appliances = string.IsNullOrEmpty(plugwiseAppliances) ? new int[] { } : plugwiseAppliances.Split(',').Select(s => int.Parse(s));
+
         }
 
         private static void ShowHelp()
@@ -120,26 +133,59 @@ namespace PlugwiseImporter
                 Console.WriteLine("name: {0} description: {1}", lister[0], lister[2]);
         }
 
-        private static void DoImport(DateTime from, DateTime to)
+        private static void DoDailyImport(DateTime from, DateTime to)
         {
             IList<YieldAggregate> applianceLog;
-            var appliances = string.IsNullOrEmpty(_plugwiseAppliances) ? new int[] { } : _plugwiseAppliances.Split(',').Select(s => int.Parse(s));
 
-            applianceLog = GetPlugwiseYield(from, to, appliances);
-            Console.WriteLine("Result: {0} days, {1} kWh",
+            applianceLog = GetPlugwiseYield(from, to, _appliances);
+            Console.WriteLine("Result: {0} items, {1} kWh",
                                 applianceLog.Count,
                                 applianceLog.Sum(log => log.Yield));
-
-            foreach (var item in applianceLog)
-            {
-                Console.WriteLine("{0} \t{1}", item.Date.ToString("d"), item.Yield);
-            }
+            if (_verbose)
+                foreach (var item in applianceLog)
+                {
+                    Console.WriteLine("{0:d} \t{1:0.0} {2} ",
+                        item.Date,
+                        item.Yield,
+                        new string('#', (int)(item.Yield * 2)));
+                }
 
             foreach (var plugin in _plugins)
             {
                 plugin.Push(applianceLog);
             }
         }
+
+        private static void DoIntradayImport(DateTime since)
+        {
+            var applianceLog = Get5minPlugwiseYield(since, _appliances);
+            Console.WriteLine("Result: {0} items, {1} kWh",
+                                applianceLog.Count,
+                                applianceLog.Sum(log => log.Yield));
+            if (_verbose)
+                foreach (var item in applianceLog)
+                {
+                    Console.WriteLine("{0} \t{1:0.0} {2} ",
+                        item.Date,
+                        item.Yield,
+                        new string('#', (int)(item.Yield * 1000 * 12 * 10)));
+                }
+            if (applianceLog.Any())
+            {
+                Properties.Settings.Default.LastIntraDay = applianceLog.Last().Date;
+                Properties.Settings.Default.Save();
+
+                foreach (var plugin in _plugins)
+                {
+                    plugin.PushIntraday(applianceLog);
+                }
+            }
+            else
+            {
+                Console.WriteLine("No 5min intraday data found");
+            }
+        }
+
 
         public static bool TryParse(string arg, string option, Action a, string helptext = "")
         {
@@ -222,6 +268,74 @@ namespace PlugwiseImporter
             }
         }
 
+
+
+        /// <summary>
+        /// Queries the plugwise database for the yield in the given month.
+        /// </summary>
+        /// <param name="from">start point, inclusive</param>
+        /// <param name="to">start point, inclusive</param>
+        /// <returns></returns>
+        private static IList<YieldAggregate> Get5minPlugwiseYield(DateTime from, IEnumerable<int> applianceIds)
+        {
+            var dbPath = GetPlugwiseDatabase();
+            Console.WriteLine("Loading 5min Plugwise data from {0}", dbPath);
+
+            string dbConnString = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source='" + dbPath + "';Persist Security Info=False;";
+            using (var connection = new OleDbConnection(dbConnString))
+            using (var db = new PlugwiseDataContext(connection))
+            {
+                // Querying on a datetime fails somehow
+                // As a workaround we list the complete table and use linq to objects for the filter
+                // This presents some scalability issues and should be looked in to.
+                List<Minute_Log_5> latest;
+                if (!applianceIds.Any())
+                    latest = LoadAll5minData(db);
+                else
+                    latest = Load5minApplianceData(db, applianceIds);
+
+                Console.WriteLine("Loading 5minute plugwise production data since {0}", from);
+
+                var applianceLog = (from logline in latest
+                                    where logline.LogDate >= @from.AddHours(-1)
+                                    from log in Get5minParts(logline)
+                                    where log.Date >= @from && log.Yield > 0.0
+                                    group log by log.Date into logbydate
+                                    orderby logbydate.Key
+                                    select new YieldAggregate { Date = logbydate.Key, Yield = logbydate.Sum(l => l.Yield) }
+                                    ).ToList();
+                return applianceLog;
+            }
+        }
+
+        private static IEnumerable<YieldAggregate> Get5minParts(Minute_Log_5 log)
+        {
+            if (log.Usage_00 != null)
+                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(00), Yield = -(double)log.Usage_00 };
+            if (log.Usage_05 != null)
+                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(05), Yield = -(double)log.Usage_05 };
+            if (log.Usage_10 != null)
+                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(10), Yield = -(double)log.Usage_10 };
+            if (log.Usage_15 != null)
+                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(15), Yield = -(double)log.Usage_15 };
+            if (log.Usage_20 != null)
+                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(20), Yield = -(double)log.Usage_20 };
+            if (log.Usage_25 != null)
+                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(25), Yield = -(double)log.Usage_25 };
+            if (log.Usage_30 != null)
+                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(30), Yield = -(double)log.Usage_30 };
+            if (log.Usage_35 != null)
+                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(35), Yield = -(double)log.Usage_35 };
+            if (log.Usage_40 != null)
+                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(40), Yield = -(double)log.Usage_40 };
+            if (log.Usage_45 != null)
+                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(45), Yield = -(double)log.Usage_45 };
+            if (log.Usage_50 != null)
+                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(50), Yield = -(double)log.Usage_50 };
+            if (log.Usage_55 != null)
+                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(55), Yield = -(double)log.Usage_55 };
+        }
+
         private static List<Appliance_Log> LoadApplianceData(PlugwiseDataContext db, IEnumerable<int> appliances)
         {
             // Two-part query to work around linq-to-Access limitations
@@ -240,10 +354,36 @@ namespace PlugwiseImporter
             return applogs;
         }
 
+        private static List<Minute_Log_5> Load5minApplianceData(PlugwiseDataContext db, IEnumerable<int> appliances)
+        {
+            // Two-part query to work around linq-to-Access limitations
+            var allapps = (from app in db.Appliances select app)
+                .ToDictionary(app => app.ID);
+
+            var apps = appliances.Select(id => allapps[id]);
+
+            Console.WriteLine("Found {0}", string.Join(";", apps.Select(a => a.Name)));
+
+            var applogs = apps.SelectMany(app =>
+                           (from log in db.Minute_Log_5s
+                            where log.ApplianceID == app.ID
+                            select log)
+                           ).ToList();
+            return applogs;
+        }
+
         private static List<Appliance_Log> LoadAllData(PlugwiseDataContext db)
         {
 
             var latest = (from log in db.Appliance_Logs
+                          select log).ToList();
+            return latest;
+        }
+
+        private static List<Minute_Log_5> LoadAll5minData(PlugwiseDataContext db)
+        {
+
+            var latest = (from log in db.Minute_Log_5s
                           select log).ToList();
             return latest;
         }
@@ -270,6 +410,8 @@ namespace PlugwiseImporter
         void Push(IEnumerable<YieldAggregate> values);
 
         bool TryParse(string arg);
+
+        void PushIntraday(IEnumerable<YieldAggregate> values);
     }
 
 
