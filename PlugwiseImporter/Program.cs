@@ -37,7 +37,15 @@ namespace PlugwiseImporter
             {
                 _days = -1;
                 _to = DateTime.Now.Date.AddDays(1);
-                var from = Properties.Settings.Default.LastIntraDay;
+                DateTime from;
+                if (Properties.Settings.Default != null)
+                {
+                    from = Properties.Settings.Default.LastIntraDay;
+                }
+                else
+                {
+                    from = DateTime.Now.Date;
+                }
                 ParseCommandline(args);
 
                 if (_days > 0)
@@ -137,7 +145,7 @@ namespace PlugwiseImporter
         {
             IList<YieldAggregate> applianceLog;
 
-            applianceLog = GetPlugwiseYield(from, to, _appliances);
+            applianceLog = GetPlugwiseYield(from.Date, to.Date, _appliances);
             Console.WriteLine("Result: {0} items, {1} kWh",
                                 applianceLog.Count,
                                 applianceLog.Sum(log => log.Yield));
@@ -167,18 +175,17 @@ namespace PlugwiseImporter
                 {
                     Console.WriteLine("{0} \t{1:0.0} {2} ",
                         item.Date,
-                        item.Yield,
-                        new string('#', (int)(item.Yield * 1000 * 12 * 10)));
+                        item.Yield * 1000 * (60 / 5),
+                        new string('#', (int)(item.Yield * 1000 * 12) / 20));
                 }
             if (applianceLog.Any())
             {
-                Properties.Settings.Default.LastIntraDay = applianceLog.Last().Date;
-                Properties.Settings.Default.Save();
-
                 foreach (var plugin in _plugins)
                 {
                     plugin.PushIntraday(applianceLog);
                 }
+                Properties.Settings.Default.LastIntraDay = applianceLog.Last().Date;
+                Properties.Settings.Default.Save();
             }
             else
             {

@@ -65,10 +65,11 @@ namespace PlugwiseImporter
             var delay = false;
             foreach (var batch in batches)
             {
+                var batchlist = batch.ToArray();
                 if (delay) { Thread.Sleep(TimeSpan.FromSeconds(10)); /* as recommended by PVOutput.org*/ }
                 delay = true;
 
-                var logstrings = (from log in batch
+                var logstrings = (from log in batchlist
                                   select string.Format("{0:yyyyMMdd},{0:HH:mm},-1,{1}",
                                   log.Date,
                                   Math.Round(log.Yield * 1000 * 60 / 5)) // Translate kWh/5min to watts
@@ -77,6 +78,9 @@ namespace PlugwiseImporter
                 var values = new NameValueCollection();
                 values.Add("data", data);
                 UploadPVOutputValues(uri, values);
+
+                Properties.Settings.Default.LastIntraDay = batchlist.Last().Date;
+                Properties.Settings.Default.Save();
             }
 
         }
