@@ -48,12 +48,11 @@ namespace PlugwiseImporter
                                 orderby logsbydate.Key
                                 where applianceIds.All(
                                     appliance => logsbydate.Any(log => log.ApplianceID == appliance))
-                                select new YieldAggregate
-                                {
-                                    Date = logsbydate.Key,
-                                    Yield = -logsbydate.Sum(log => log.Usage_offpeak + log.Usage_peak),
-                                    Duration = TimeSpan.FromHours(1)
-                                })
+                                select new YieldAggregate(
+                                    date: logsbydate.Key,
+                                    yield: -logsbydate.Sum(log => log.Usage_offpeak + log.Usage_peak),
+                                    duration: TimeSpan.FromHours(1)
+                                  ))
                                   .ToList();
             return applianceLog;
 
@@ -89,7 +88,10 @@ namespace PlugwiseImporter
                                 where applianceIds.All(
                                   appliance => logbydate.Any(log => log.ApplianceID == appliance))
 
-                                select new YieldAggregate { Date = logbydate.Key, Yield = logbydate.Sum(l => l.Yield), Duration = logbydate.First().Duration }
+                                select new YieldAggregate(
+                                    date: logbydate.Key,
+                                    yield: logbydate.Sum(l => l.Yield),
+                                    duration: logbydate.First().Duration)
                                 ).ToList();
             return applianceLog;
         }
@@ -99,12 +101,12 @@ namespace PlugwiseImporter
         {
             Func<DateTime, double, YieldAggregate> factory =
                 (moment, yield) => new YieldAggregate
-                {
-                    Date = moment,
-                    Yield = yield,
-                    ApplianceID = log.ApplianceID,
-                    Duration = TimeSpan.FromMinutes(5)
-                };
+                (
+                    date: moment,
+                    yield: yield,
+                    applianceID: log.ApplianceID,
+                    duration: TimeSpan.FromMinutes(5)
+                );
 
             if (log.Usage_00 != null)
                 yield return factory(log.LogDate.AddMinutes(00), -(double)log.Usage_00);

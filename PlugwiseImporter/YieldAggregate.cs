@@ -7,20 +7,27 @@ namespace PlugwiseImporter
 {
     public class YieldAggregate
     {
+        public YieldAggregate(DateTime date, double yield, TimeSpan duration, int? applianceID = null)
+        {
+            Date = date;
+            Yield = yield;
+            Duration = duration;
+            ApplianceID = applianceID;
+        }
         /// <summary>
         /// Generated energy in kWh
         /// </summary>
-        public double Yield { get; set; }
+        public double Yield { get; private set; }
 
         /// <summary>
         /// Date of the generation
         /// </summary>
-        public DateTime Date { get; set; }
+        public DateTime Date { get; private set; }
 
         /// <summary>
         /// The timespan the yield was produced in
         /// </summary>
-        public TimeSpan Duration { get; set; }
+        public TimeSpan Duration { get; private set; }
 
         /// <summary>
         /// Power in watts
@@ -33,9 +40,9 @@ namespace PlugwiseImporter
             }
         }
         /// <summary>
-        /// Identifier of the appliance, 0 if not available
+        /// Identifier of the appliance, null if not available
         /// </summary>
-        public int ApplianceID { get; set; }
+        public int? ApplianceID { get; private set; }
 
         public override string ToString()
         {

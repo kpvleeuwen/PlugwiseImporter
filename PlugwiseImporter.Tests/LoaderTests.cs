@@ -24,15 +24,9 @@ namespace PlugwiseImporter.Tests
 
             var result = undertest.Get5minPlugwiseYield(date, new int[0] /*No specific appliances*/);
             var expected = new[] { 
-                new YieldAggregate {
-                Date = date.AddMinutes(0),
-                Duration = TimeSpan.FromMinutes(5), Yield = 1 } , 
-                new YieldAggregate {
-                Date = date.AddMinutes(5),
-                Duration = TimeSpan.FromMinutes(5), Yield = 3 } , 
-                new YieldAggregate {
-                Date = date.AddMinutes(10),
-                Duration = TimeSpan.FromMinutes(5), Yield = 2 }
+                new YieldAggregate (date.AddMinutes(00), 1, TimeSpan.FromMinutes(5)) , 
+                new YieldAggregate (date.AddMinutes(05), 3, TimeSpan.FromMinutes(5)) , 
+                new YieldAggregate (date.AddMinutes(10), 2, TimeSpan.FromMinutes(5))
             };
             CollectionAssert.AreEquivalent(expected, result);
         }
@@ -56,9 +50,7 @@ namespace PlugwiseImporter.Tests
             var result = undertest.Get5minPlugwiseYield(date, new[] { 1, 2 } /*specific appliances*/);
             // We expect a single result using just Usage_05 since that is complete.
             var expected = new[] { 
-                new YieldAggregate {
-                Date = date.AddMinutes(5),
-                Duration = TimeSpan.FromMinutes(5), Yield = 3 }
+                new YieldAggregate(date.AddMinutes(5),3, TimeSpan.FromMinutes(5))
             };
             CollectionAssert.AreEquivalent(expected, result);
         }
