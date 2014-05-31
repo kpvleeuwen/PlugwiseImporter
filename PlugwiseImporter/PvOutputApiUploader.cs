@@ -72,7 +72,7 @@ namespace PlugwiseImporter
                 var logstrings = (from log in batchlist
                                   select string.Format("{0:yyyyMMdd},{0:HH:mm},-1,{1}",
                                   log.Date,
-                                  Math.Round(log.Yield * 1000 * 60 / 5)) // Translate kWh/5min to watts
+                                  log.AveragePower)
                                   );
                 var data = string.Join(";", logstrings);
                 var values = new NameValueCollection();

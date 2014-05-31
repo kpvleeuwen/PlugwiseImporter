@@ -175,8 +175,8 @@ namespace PlugwiseImporter
                 {
                     Console.WriteLine("{0} \t{1:0.0} {2} ",
                         item.Date,
-                        item.Yield * 1000 * (60 / 5),
-                        new string('#', (int)(item.Yield * 1000 * 12) / 20));
+                        item.AveragePower,
+                        new string('#', (int)(item.AveragePower / 20)));
                 }
             if (applianceLog.Any())
             {
@@ -270,7 +270,8 @@ namespace PlugwiseImporter
                                     select new YieldAggregate
                                     {
                                         Date = logsbydate.Key,
-                                        Yield = -logsbydate.Sum(log => log.Usage_offpeak + log.Usage_peak)
+                                        Yield = -logsbydate.Sum(log => log.Usage_offpeak + log.Usage_peak),
+                                        Duration = TimeSpan.FromHours(1)
                                     })
                                       .ToList();
                 return applianceLog;
