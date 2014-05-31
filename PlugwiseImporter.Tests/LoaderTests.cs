@@ -10,6 +10,34 @@ namespace PlugwiseImporter.Tests
     public class LoaderTests
     {
         /// <summary>
+        /// Tests that timestamps which have missing values are not skipped when we have no specific appliances.
+        /// </summary>
+        [Test]
+        public void InComplete5MinDataIsReported()
+        {
+            var undertest = new TestLoader();
+            var date = new DateTime(2014, 05, 14);
+            undertest.Minute_Log_5s = new[]{
+                new Minute_Log_5 { ApplianceID = 1, LogDate = date, Usage_00 = -1,   Usage_05 = -1 },
+                new Minute_Log_5 { ApplianceID = 2, LogDate = date, Usage_00 = null, Usage_05 = -2, Usage_10 = -2 },
+            };
+
+            var result = undertest.Get5minPlugwiseYield(date, new int[0] /*No specific appliances*/);
+            var expected = new[] { 
+                new YieldAggregate {
+                Date = date.AddMinutes(0),
+                Duration = TimeSpan.FromMinutes(5), Yield = 1 } , 
+                new YieldAggregate {
+                Date = date.AddMinutes(5),
+                Duration = TimeSpan.FromMinutes(5), Yield = 3 } , 
+                new YieldAggregate {
+                Date = date.AddMinutes(10),
+                Duration = TimeSpan.FromMinutes(5), Yield = 2 }
+            };
+            CollectionAssert.AreEquivalent(expected, result);
+        }
+
+        /// <summary>
         /// Tests that timestamps which have missing values are skipped
         /// 
         /// The idea is that the plug is temporarily unreachable and will fill all missing values later.
@@ -25,7 +53,7 @@ namespace PlugwiseImporter.Tests
                 new Minute_Log_5 { ApplianceID = 2, LogDate = date, Usage_00 = null, Usage_05 = -2, Usage_10 = -2 },
             };
 
-            var result = undertest.Get5minPlugwiseYield(date, new int[0]);
+            var result = undertest.Get5minPlugwiseYield(date, new[] { 1, 2 } /*specific appliances*/);
             // We expect a single result using just Usage_05 since that is complete.
             var expected = new[] { 
                 new YieldAggregate {

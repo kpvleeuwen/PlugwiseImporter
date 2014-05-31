@@ -11,7 +11,8 @@ namespace PlugwiseImporter
     {
         private PlugwiseDataContext _db;
         private OleDbConnection _connection;
-        public Loader(FileInfo database): this()
+        public Loader(FileInfo database)
+            : this()
         {
             string dbConnString = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source='" + database + "';Persist Security Info=False;";
             _connection = new OleDbConnection(dbConnString);
@@ -88,7 +89,7 @@ namespace PlugwiseImporter
                                 where applianceIds.All(
                                   appliance => logbydate.Any(log => log.ApplianceID == appliance))
 
-                                select new YieldAggregate { Date = logbydate.Key, Yield = logbydate.Sum(l => l.Yield), Duration = TimeSpan.FromHours(1) }
+                                select new YieldAggregate { Date = logbydate.Key, Yield = logbydate.Sum(l => l.Yield), Duration = logbydate.First().Duration }
                                 ).ToList();
             return applianceLog;
         }
