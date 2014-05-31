@@ -13,8 +13,13 @@ namespace PlugwiseImporter
         public double Yield { get; set; }
 
         /// <summary>
-        /// Date of the generation, the time part is meaningless.
+        /// Date of the generation
         /// </summary>
         public DateTime Date { get; set; }
+
+        /// <summary>
+        /// Identifier of the appliance, 0 if not available
+        /// </summary>
+        public int ApplianceID { get; set; }
     }
 }
