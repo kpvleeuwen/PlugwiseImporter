@@ -313,8 +313,8 @@ namespace PlugwiseImporter
                                     orderby logbydate.Key
                                     where applianceIds.All(
                                       appliance => logbydate.Any(log => log.ApplianceID == appliance))
-                                  
-                                    select new YieldAggregate { Date = logbydate.Key, Yield = logbydate.Sum(l => l.Yield) }
+
+                                    select new YieldAggregate { Date = logbydate.Key, Yield = logbydate.Sum(l => l.Yield), Duration = TimeSpan.FromHours(1) }
                                     ).ToList();
                 return applianceLog;
             }
@@ -322,30 +322,39 @@ namespace PlugwiseImporter
 
         private static IEnumerable<YieldAggregate> Get5minParts(Minute_Log_5 log)
         {
+            Func<DateTime, double, YieldAggregate> factory =
+                (moment, yield) => new YieldAggregate
+                {
+                    Date = moment,
+                    Yield = yield,
+                    ApplianceID = log.ApplianceID,
+                    Duration = TimeSpan.FromMinutes(5)
+                };
+
             if (log.Usage_00 != null)
-                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(00), Yield = -(double)log.Usage_00, ApplianceID = log.ApplianceID };
+                yield return factory(log.LogDate.AddMinutes(00), -(double)log.Usage_00);
             if (log.Usage_05 != null)
-                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(05), Yield = -(double)log.Usage_05, ApplianceID = log.ApplianceID };
+                yield return factory(log.LogDate.AddMinutes(05), -(double)log.Usage_05);
             if (log.Usage_10 != null)
-                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(10), Yield = -(double)log.Usage_10, ApplianceID = log.ApplianceID };
+                yield return factory(log.LogDate.AddMinutes(10), -(double)log.Usage_10);
             if (log.Usage_15 != null)
-                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(15), Yield = -(double)log.Usage_15, ApplianceID = log.ApplianceID };
+                yield return factory(log.LogDate.AddMinutes(15), -(double)log.Usage_15);
             if (log.Usage_20 != null)
-                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(20), Yield = -(double)log.Usage_20, ApplianceID = log.ApplianceID };
+                yield return factory(log.LogDate.AddMinutes(20), -(double)log.Usage_20);
             if (log.Usage_25 != null)
-                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(25), Yield = -(double)log.Usage_25, ApplianceID = log.ApplianceID };
+                yield return factory(log.LogDate.AddMinutes(25), -(double)log.Usage_25);
             if (log.Usage_30 != null)
-                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(30), Yield = -(double)log.Usage_30, ApplianceID = log.ApplianceID };
+                yield return factory(log.LogDate.AddMinutes(30), -(double)log.Usage_30);
             if (log.Usage_35 != null)
-                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(35), Yield = -(double)log.Usage_35, ApplianceID = log.ApplianceID };
+                yield return factory(log.LogDate.AddMinutes(35), -(double)log.Usage_35);
             if (log.Usage_40 != null)
-                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(40), Yield = -(double)log.Usage_40, ApplianceID = log.ApplianceID };
+                yield return factory(log.LogDate.AddMinutes(40), -(double)log.Usage_40);
             if (log.Usage_45 != null)
-                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(45), Yield = -(double)log.Usage_45, ApplianceID = log.ApplianceID };
+                yield return factory(log.LogDate.AddMinutes(45), -(double)log.Usage_45);
             if (log.Usage_50 != null)
-                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(50), Yield = -(double)log.Usage_50, ApplianceID = log.ApplianceID };
+                yield return factory(log.LogDate.AddMinutes(50), -(double)log.Usage_50);
             if (log.Usage_55 != null)
-                yield return new YieldAggregate { Date = log.LogDate.AddMinutes(55), Yield = -(double)log.Usage_55, ApplianceID = log.ApplianceID };
+                yield return factory(log.LogDate.AddMinutes(55), -(double)log.Usage_55);
         }
 
         private static List<Appliance_Log> LoadApplianceData(PlugwiseDataContext db, IEnumerable<int> appliances)
