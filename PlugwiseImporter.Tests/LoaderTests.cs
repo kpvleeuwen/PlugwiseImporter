@@ -21,8 +21,8 @@ namespace PlugwiseImporter.Tests
             var undertest = new TestLoader();
             var date = new DateTime(2014, 05, 14);
             undertest.Minute_Log_5s = new[]{
-                new Minute_Log_5 { ApplianceID = 1, LogDate = date, Usage_00 = 1,    Usage_05 = 1},
-                new Minute_Log_5 { ApplianceID = 2, LogDate = date, Usage_00 = null, Usage_05 = 2, Usage_10 = 2},
+                new Minute_Log_5 { ApplianceID = 1, LogDate = date, Usage_00 = -1,   Usage_05 = -1 },
+                new Minute_Log_5 { ApplianceID = 2, LogDate = date, Usage_00 = null, Usage_05 = -2, Usage_10 = -2 },
             };
 
             var result = undertest.Get5minPlugwiseYield(date, new int[0]);
