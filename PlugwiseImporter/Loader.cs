@@ -11,13 +11,14 @@ namespace PlugwiseImporter
     {
         private PlugwiseDataContext _db;
         private OleDbConnection _connection;
-        public Loader(FileInfo database)
+        public Loader(FileInfo database): this()
         {
             string dbConnString = @"Provider=Microsoft.ACE.OLEDB.12.0;Data Source='" + database + "';Persist Security Info=False;";
             _connection = new OleDbConnection(dbConnString);
             _db = new PlugwiseDataContext(_connection);
         }
 
+        protected Loader() { }
 
         /// <summary>
         /// Queries the plugwise database for the yield in the given month.
@@ -30,7 +31,7 @@ namespace PlugwiseImporter
             // Querying on a datetime fails somehow
             // As a workaround we list the complete table and use linq to objects for the filter
             // This presents some scalability issues and should be looked in to.
-            List<Appliance_Log> latest;
+            IList<Appliance_Log> latest;
             if (!applianceIds.Any())
                 latest = LoadAllData();
             else
@@ -70,7 +71,7 @@ namespace PlugwiseImporter
             // Querying on a datetime fails somehow
             // As a workaround we list the complete table and use linq to objects for the filter
             // This presents some scalability issues and should be looked in to.
-            List<Minute_Log_5> latest;
+            IList<Minute_Log_5> latest;
             if (!applianceIds.Any())
                 latest = LoadAll5minData();
             else
@@ -130,7 +131,7 @@ namespace PlugwiseImporter
                 yield return factory(log.LogDate.AddMinutes(55), -(double)log.Usage_55);
         }
 
-        private List<Appliance_Log> LoadApplianceData(IEnumerable<int> appliances)
+        protected virtual IList<Appliance_Log> LoadApplianceData(IEnumerable<int> appliances)
         {
             // Two-part query to work around linq-to-Access limitations
             var allapps = (from app in _db.Appliances select app)
@@ -148,7 +149,7 @@ namespace PlugwiseImporter
             return applogs;
         }
 
-        private List<Minute_Log_5> Load5minApplianceData(IEnumerable<int> appliances)
+        protected virtual IList<Minute_Log_5> Load5minApplianceData(IEnumerable<int> appliances)
         {
             // Two-part query to work around linq-to-Access limitations
             var allapps = (from app in _db.Appliances select app)
@@ -166,15 +167,14 @@ namespace PlugwiseImporter
             return applogs;
         }
 
-        private List<Appliance_Log> LoadAllData()
+        protected virtual IList<Appliance_Log> LoadAllData()
         {
-
             var latest = (from log in _db.Appliance_Logs
                           select log).ToList();
             return latest;
         }
 
-        private List<Minute_Log_5> LoadAll5minData()
+        protected virtual IList<Minute_Log_5> LoadAll5minData()
         {
             var latest = (from log in _db.Minute_Log_5s
                           select log).ToList();
