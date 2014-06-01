@@ -2,7 +2,10 @@ PlugwiseImporter
 ================
 
 Glue logic to update the SonnenErtrag (solar-yield) database with Plugwise readouts.
-Can update PvOutput.org too.
+Can update PvOutput.org too, even with 5-minute semirealtime data.
+
+Download the artifacts at AppVeyor:
+[![Build status](https://ci.appveyor.com/api/projects/status/bb1paqlqp9ox0t6e)](https://ci.appveyor.com/project/kpvleeuwen/plugwiseimporter)
 
 Requirements: 
  * .Net 4.0 (client profile)
