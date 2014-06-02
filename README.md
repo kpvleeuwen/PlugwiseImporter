@@ -5,6 +5,9 @@ Glue logic to update the SonnenErtrag (solar-yield) database with Plugwise reado
 Can update PvOutput.org too, even with 5-minute semirealtime data.
 
 Download the artifacts at AppVeyor:
+
+
+[Latest EXE binary](https://ci.appveyor.com/project/kpvleeuwen/plugwiseimporter/build/artifacts)
 [![Build status](https://ci.appveyor.com/api/projects/status/bb1paqlqp9ox0t6e)](https://ci.appveyor.com/project/kpvleeuwen/plugwiseimporter)
 
 Requirements: 
